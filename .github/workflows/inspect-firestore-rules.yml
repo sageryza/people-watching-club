@@ -1,0 +1,26 @@
+name: Inspect Firestore Rules
+on:
+  workflow_dispatch:
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write service-account key
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/sa.json"
+      - name: Fetch current Firestore rules (read-only)
+        run: |
+          set -e
+          gcloud auth activate-service-account --key-file="$RUNNER_TEMP/sa.json"
+          PROJECT=people-watching-club
+          TOKEN=$(gcloud auth print-access-token)
+          echo "===== RELEASES ====="
+          REL=$(curl -s -H "Authorization: Bearer $TOKEN" "https://firebaserules.googleapis.com/v1/projects/$PROJECT/releases")
+          echo "$REL"
+          RULESET=$(echo "$REL" | python3 -c "import sys,json; d=json.load(sys.stdin); r=[x for x in d.get('releases',[]) if 'cloud.firestore' in x.get('name','')]; print(r[0]['rulesetName'] if r else '')")
+          echo "===== RULESET: $RULESET ====="
+          if [ -n "$RULESET" ]; then
+            curl -s -H "Authorization: Bearer $TOKEN" "https://firebaserules.googleapis.com/v1/$RULESET" \
+              | python3 -c "import sys,json; d=json.load(sys.stdin); [print(f.get('content','')) for f in d.get('source',{}).get('files',[])]"
+          fi
