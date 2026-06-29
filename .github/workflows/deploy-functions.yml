@@ -6,6 +6,7 @@ on:
     paths:
       - 'functions/**'
       - 'firebase.json'
+      - 'firestore.rules'
       - '.github/workflows/deploy-functions.yml'
 jobs:
   deploy:
@@ -32,4 +33,4 @@ jobs:
       - name: Deploy functions
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
-        run: firebase deploy --only functions --project people-watching-club --non-interactive
+        run: firebase deploy --only functions,firestore:rules --project people-watching-club --non-interactive
